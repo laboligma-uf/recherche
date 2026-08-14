@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import Papa from 'papaparse';
 import {
   ArrowUpRight,
   BookOpen,
@@ -18,7 +17,7 @@ type Publication = {
   DOI: string;
 };
 
-const csvPath = '/publications.csv';
+const jsonPath = '/publications.json';
 
 function App() {
   const [publications, setPublications] = useState<Publication[]>([]);
@@ -27,28 +26,19 @@ function App() {
   const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
-    fetch(csvPath)
+    fetch(jsonPath)
       .then((response) => {
         if (!response.ok) throw new Error('Le fichier des publications est introuvable.');
-        return response.text();
+        return response.json() as Promise<Publication[]>;
       })
-      .then((csv) => {
-        const result = Papa.parse<Publication>(csv, {
-          header: true,
-          skipEmptyLines: true,
-          transformHeader: (header) => header.trim(),
-          transform: (value) => value.trim(),
-        });
-        const validRows = result.data.filter(
+      .then((data) => {
+        const validRows = data.filter(
           (row) => row.Sujet && row.Auteur && row.DOI
         );
         if (validRows.length === 0) {
           throw new Error('Aucune publication valide n’a été trouvée dans le fichier.');
         }
         setPublications(validRows);
-        if (result.errors.length > 0) {
-          setLoadError('Certaines lignes du fichier n’ont pas pu être lues.');
-        }
       })
       .catch((error: Error) => setLoadError(error.message))
       .finally(() => setIsLoading(false));
